@@ -1,6 +1,6 @@
 import test from "tape";
 import { Draft } from "immer";
-import { Store } from ".";
+import { Store } from "./index";
 
 enum VisibilityFilter {
   SHOW_ALL = "SHOW_ALL",
