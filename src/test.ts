@@ -2,9 +2,9 @@ import test from "tape";
 import { StateSingleton } from "./index";
 
 enum VisibilityFilter {
-  SHOW_ALL = "SHOW_ALL",
-  SHOW_COMPLETED = "SHOW_COMPLETED",
-  SHOW_ACTIVE = "SHOW_ACTIVE"
+  SHOW_ALL,
+  SHOW_COMPLETED,
+  SHOW_ACTIVE
 }
 
 interface Todo {

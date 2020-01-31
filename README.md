@@ -8,9 +8,9 @@ you can see the [redux todos example](https://github.com/reduxjs/redux/tree/mast
 
 ```typescript
 enum VisibilityFilter {
-  SHOW_ALL = "SHOW_ALL",
-  SHOW_COMPLETED = "SHOW_COMPLETED",
-  SHOW_ACTIVE = "SHOW_ACTIVE"
+  SHOW_ALL
+  SHOW_COMPLETED
+  SHOW_ACTIVE
 }
 
 interface Todo {
@@ -66,7 +66,11 @@ function MyComponent() {
   // selected value changes
   const todos = useStateSingleton(appStateSingleton, state => state.todos);
   // you can also provide a custom comparator if you need it, though this should be rare.
-  const todos = useStateSingleton(appStateSingleton, state => state.todos, myDeepEqualFn);
+  const todos = useStateSingleton(
+    appStateSingleton,
+    state => state.todos,
+    myDeepEqualFn
+  );
 
   // ... use the immutable todos array in your component ...
 }
@@ -87,3 +91,119 @@ you can use `update()` completely outside of react.
 
 you can also read from the `StateSingleton` outside of react by using its `getState()` method. this can be useful when debugging in the app console, but you should generally avoid using this method. instead, if you are using a library other than react, you can use the `listen(cb)` method to subscribe to changes to the `StateSingleton` and react to them.
 
+## recipe: data fetching
+
+```typescript
+const todoState = new StateSingleton({
+  todos: [],
+  loading: false,
+  error: null,
+  pendingRequests: 0
+});
+
+async function fetchTodoList() {
+  let requestId = 0;
+
+  todoState.update(state => {
+    state.loading = true;
+    requestId = ++state.pendingRequests;
+  });
+
+  try {
+    const req = await fetch("/todos.json");
+    const json = await req.json();
+
+    todoState.update(state => {
+      // make sure that if there are multiple requests in flight, we keep
+      // the latest one.
+      if (state.pendingRequests === requestId) {
+        state.todos = json;
+        state.loading = false;
+      }
+    });
+  } catch (e) {
+    todoState.update(state => {
+      if (state.pendingRequests === requestId) {
+        state.loading = false;
+        state.error = e.toString();
+      }
+    });
+  }
+}
+```
+
+## recipe: storing state in react context
+
+it's as easy as composing a few hooks together!
+
+```tsx
+const MyContext = React.createContext(new StateSingleton(...));
+
+function MyComponent() {
+  const singleton = useContext(MyContext);
+  const state = useStateSingleton(singleton);
+  // ... do something with state ...
+}
+
+React.render(<MyContext.Provider><MyComponent /></MyContext.Provider>, domElem);
+```
+
+## recipe: OOP-style data hiding
+
+sometimes you may want to hide the internals of the state object from the react components with a facade. this helps you present a stable "view model" interface to your components. for many projects it's not needed but sometimes it can be useful. again, use composition -- create "reader" classes that wrap the state and create a corresponding react hook.
+
+```typescript
+class TodosReader {
+  constructor(private todos: Todo[]) {}
+
+  getTodoById(id: string) {
+    return this.todos.find(todo => todo.id === id);
+  }
+
+  // ... some other methods ...
+}
+
+function useTodosReader() {
+  return new TodosReader(useStateSingleton(todoState, state => state.todos));
+}
+```
+
+## recipe: OOP-style mutation
+
+you can create a similar interface as above for mutation -- though it can get out of hand quickly, so be careful!
+
+```typescript
+class TodoWriter {
+  constructor(private todo: Todo) {}
+
+  getId() {
+    return this.todo.id;
+  }
+
+  toggleCompleted() {
+    this.todo.completed = !this.todo.completed;
+  }
+}
+
+class TodosWriter extends TodosReader {
+  constructor(todos: Todo[]) {
+    super(todos);
+  }
+
+  getTodoById(id: string) {
+    return new TodoWriter(super.getTodoByid(id));
+  }
+}
+
+function handleCheckboxToggled(id: string) {
+  todoState.update(state => {
+    const todoWriter = new TodoWriter(state);
+    todoWriter.getTodoById(id).toggleCompleted();
+  });
+}
+```
+
+## recipe: typescript utilities
+
+- you can refer to the type of your `StateSingleton` by using `typeof myStateSingleton`. this is just a handy typescript feature.
+- you can refer to the type of your `StateSingleton`'s **state** by using `StateType<typeof myStateSingleton>`. this ships with `use-state-singleton`.
