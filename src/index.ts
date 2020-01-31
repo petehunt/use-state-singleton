@@ -1,23 +1,27 @@
 import { Draft, produce } from "immer";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import invariant from "invariant";
 
-export interface StoreListener<T> {
-  (state: T): void;
+export interface StoreListener<TState> {
+  (state: TState): void;
 }
 
-export class Store<T> {
+export type StateType<TStore> = TStore extends Store<infer TState>
+  ? TState
+  : never;
+
+export class Store<TState> {
   // Setting this to StoreListener<T> confused the type inferencer
   // so we go with unknown instead.
   private listeners: Set<unknown> = new Set();
 
-  constructor(private state: T) {}
+  constructor(private state: TState) {}
 
   getState() {
     return this.state;
   }
 
-  listen(listener: StoreListener<T>) {
+  listen(listener: StoreListener<TState>) {
     invariant(
       !this.listeners.has(listener),
       "This listener was already added to this Store."
@@ -28,38 +32,63 @@ export class Store<T> {
     };
   }
 
-  update(cb: (state: Draft<T>) => void) {
-    this.state = produce(this.state, cb);
-    for (let listener of this.listeners) {
-      (listener as StoreListener<T>)(this.state);
+  update(cb: (state: Draft<TState>) => void) {
+    const prevState = this.state;
+    this.state = produce(prevState, cb);
+
+    if (this.state !== prevState) {
+      for (let listener of this.listeners) {
+        (listener as StoreListener<TState>)(this.state);
+      }
     }
   }
 }
 
-export function defaultSelector(state: any) {
-  return state;
+export interface SelectorFn<TState, TSelection> {
+  (state: TState): TSelection;
 }
 
-export function defaultEquality(left: any, right: any) {
-  return left === right;
+export interface EqualityFn<TSelection> {
+  (prev: TSelection, next: TSelection): boolean;
 }
 
-export function useStore<T, S = T>(
-  store: Store<T>,
-  selector: (state: T) => S = defaultSelector,
-  equalityFn: (prev: S, next: S) => boolean = defaultEquality
-): S {
+export const defaultSelector: SelectorFn<any, any> = (state: any) => state;
+export const defaultEquality: EqualityFn<any> = (prev: any, next: any) =>
+  prev === next;
+
+export function useStore<TState, TSelection = TState>(
+  store: Store<TState>,
+  selector: SelectorFn<TState, TSelection> = defaultSelector,
+  equalityFn: EqualityFn<TSelection> = defaultEquality
+): TSelection {
   const [value, setValue] = useState(() => selector(store.getState()));
 
+  const valueRef = useRef<TSelection | null>(null);
+  valueRef.current = value;
+
+  const setValueRef = useRef<typeof setValue | null>(null);
+  setValueRef.current = setValue;
+
+  const selectorRef = useRef<SelectorFn<TState, TSelection> | null>(null);
+  selectorRef.current = selector;
+
+  const equalityFnRef = useRef<EqualityFn<TSelection> | null>(null);
+  equalityFnRef.current = equalityFn;
+
   useEffect(() => {
-    function cb(nextState: T) {
+    function cb(nextState: TState) {
+      const value = valueRef.current!;
+      const setValue = setValueRef.current!;
+      const selector = selectorRef.current!;
+      const equalityFn = equalityFnRef.current!;
+
       const nextValue = selector(nextState);
       if (!equalityFn(nextValue, value)) {
         setValue(nextValue);
       }
     }
     return store.listen(cb);
-  }, [store, selector, equalityFn]);
+  }, [store]);
 
   return value;
 }
