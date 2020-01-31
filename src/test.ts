@@ -1,6 +1,5 @@
 import test from "tape";
-import { Draft } from "immer";
-import { Store } from "./index";
+import { StateSingleton } from "./index";
 
 enum VisibilityFilter {
   SHOW_ALL = "SHOW_ALL",
@@ -20,7 +19,7 @@ interface TodoState {
   nextTodoId: number;
 }
 
-function addTodo(state: Draft<TodoState>, text: string) {
+function addTodo(state: TodoState, text: string) {
   state.todos.push({
     id: (state.nextTodoId++).toString(),
     text,
@@ -28,14 +27,11 @@ function addTodo(state: Draft<TodoState>, text: string) {
   });
 }
 
-function setVisibilityFilter(
-  state: Draft<TodoState>,
-  filter: VisibilityFilter
-) {
+function setVisibilityFilter(state: TodoState, filter: VisibilityFilter) {
   state.visibilityFilter = filter;
 }
 
-function toggleTodo(state: Draft<TodoState>, id: string) {
+function toggleTodo(state: TodoState, id: string) {
   for (let todo of state.todos) {
     if (todo.id === id) {
       todo.completed = !todo.completed;
@@ -43,46 +39,43 @@ function toggleTodo(state: Draft<TodoState>, id: string) {
   }
 }
 
-function createTodoStore(): Store<TodoState> {
-  return new Store({
+test("it works", t => {
+  const stateSingleton = new StateSingleton({
     todos: [],
     visibilityFilter: VisibilityFilter.SHOW_ALL,
     nextTodoId: 0
   });
-}
 
-test("it works", t => {
-  const store = createTodoStore();
   let changes = [];
 
-  t.deepEqual(store.getState(), {
+  t.deepEqual(stateSingleton.getState(), {
     todos: [],
     visibilityFilter: VisibilityFilter.SHOW_ALL,
     nextTodoId: 0
   });
 
-  store.listen(state => {
+  stateSingleton.listen(state => {
     changes.push(state);
   });
 
-  store.update(state => {
+  stateSingleton.update(state => {
     addTodo(state, "foo");
     addTodo(state, "bar");
     addTodo(state, "baz");
   });
 
   t.equal(changes.length, 1);
-  t.deepEqual(store.getState().todos, [
+  t.deepEqual(stateSingleton.getState().todos, [
     { id: "0", text: "foo", completed: false },
     { id: "1", text: "bar", completed: false },
     { id: "2", text: "baz", completed: false }
   ]);
 
-  store.update(state => {
+  stateSingleton.update(state => {
     toggleTodo(state, "1");
   });
 
-  t.deepEqual(store.getState().todos, [
+  t.deepEqual(stateSingleton.getState().todos, [
     { id: "0", text: "foo", completed: false },
     { id: "1", text: "bar", completed: true },
     { id: "2", text: "baz", completed: false }

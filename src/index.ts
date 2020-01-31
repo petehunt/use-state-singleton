@@ -3,16 +3,18 @@ import { useState, useEffect, useRef } from "react";
 import invariant from "invariant";
 import { DeepReadonly } from "utility-types";
 
-export interface StoreListener<TState> {
+export interface StateSingletonListener<TState> {
   (state: DeepReadonly<TState>): void;
 }
 
-export type StateType<TStore> = TStore extends Store<infer TState>
+export type StateType<TStateSingleton> = TStateSingleton extends StateSingleton<
+  infer TState
+>
   ? TState
   : never;
 
-export class Store<TState> {
-  // Setting this to StoreListener<T> confused the type inferencer
+export class StateSingleton<TState> {
+  // Setting this to StateSingletonListener<T> confused the type inferencer
   // so we go with unknown instead.
   private listeners: Set<unknown> = new Set();
 
@@ -22,10 +24,10 @@ export class Store<TState> {
     return this.state as DeepReadonly<TState>;
   }
 
-  listen(listener: StoreListener<TState>) {
+  listen(listener: StateSingletonListener<TState>) {
     invariant(
       !this.listeners.has(listener),
-      "This listener was already added to this Store."
+      "This listener was already added to this StateSingleton."
     );
     this.listeners.add(listener);
     return () => {
@@ -39,7 +41,9 @@ export class Store<TState> {
 
     if (this.state !== prevState) {
       for (let listener of this.listeners) {
-        (listener as StoreListener<TState>)(this.state as DeepReadonly<TState>);
+        (listener as StateSingletonListener<TState>)(
+          this.state as DeepReadonly<TState>
+        );
       }
     }
   }
@@ -57,18 +61,12 @@ export const defaultSelector: SelectorFn<any, any> = (state: any) => state;
 export const defaultEquality: EqualityFn<any> = (prev: any, next: any) =>
   prev === next;
 
-export function useStore<TState, TSelection = DeepReadonly<TState>>(
-  store: Store<TState>,
+export function useStateSingleton<TState, TSelection = DeepReadonly<TState>>(
+  stateSingleton: StateSingleton<TState>,
   selector: SelectorFn<DeepReadonly<TState>, TSelection> = defaultSelector,
   equalityFn: EqualityFn<TSelection> = defaultEquality
 ): TSelection {
-  const [value, setValue] = useState(() => selector(store.getState()));
-
-  const valueRef = useRef<TSelection | null>(null);
-  valueRef.current = value;
-
-  const setValueRef = useRef<typeof setValue | null>(null);
-  setValueRef.current = setValue;
+  const [value, setValue] = useState(() => selector(stateSingleton.getState()));
 
   const selectorRef = useRef<SelectorFn<
     DeepReadonly<TState>,
@@ -80,18 +78,18 @@ export function useStore<TState, TSelection = DeepReadonly<TState>>(
   equalityFnRef.current = equalityFn;
 
   useEffect(() => {
-    return store.listen(nextState => {
-      const value = valueRef.current!;
-      const setValue = setValueRef.current!;
-      const selector = selectorRef.current!;
-      const equalityFn = equalityFnRef.current!;
-
-      const nextValue = selector(nextState);
-      if (!equalityFn(nextValue, value)) {
-        setValue(nextValue);
-      }
+    return stateSingleton.listen(nextState => {
+      setValue(value => {
+        const selector = selectorRef.current!;
+        const equalityFn = equalityFnRef.current!;
+        const nextValue = selector(nextState);
+        if (!equalityFn(nextValue, value)) {
+          return nextValue;
+        }
+        return value;
+      });
     });
-  }, [store]);
+  }, [stateSingleton]);
 
   return value;
 }
