@@ -1,5 +1,5 @@
 {
-  "name": "use-singleton-state",
+  "name": "use-state-singleton",
   "version": "0.0.1",
   "description": "",
   "main": "dist/index.js",
