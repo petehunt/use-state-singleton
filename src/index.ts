@@ -1,7 +1,8 @@
 import { Draft, produce } from "immer";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import invariant from "invariant";
 import { DeepReadonly } from "utility-types";
+import useForceUpdate from "use-force-update";
 
 export interface StateSingletonListener<TState> {
   (state: DeepReadonly<TState>): void;
@@ -61,36 +62,36 @@ export const defaultSelector: SelectorFn<any, any> = (state: any) => state;
 export const defaultEquality: EqualityFn<any> = (prev: any, next: any) =>
   prev === next;
 
+function useRefOf<T>(value: T) {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref;
+}
+
 export function useStateSingleton<TState, TSelection = DeepReadonly<TState>>(
   stateSingleton: StateSingleton<TState>,
   selector: SelectorFn<DeepReadonly<TState>, TSelection> = defaultSelector,
   equalityFn: EqualityFn<TSelection> = defaultEquality
 ): TSelection {
-  const [currentState, setCurrentState] = useState(() =>
+  const forceUpdate = useForceUpdate();
+  const value = useMemo(() => selector(stateSingleton.getState()), [
+    selector,
     stateSingleton.getState()
-  );
-
-  const selectorRef = useRef<SelectorFn<
-    DeepReadonly<TState>,
-    TSelection
-  > | null>(null);
-  selectorRef.current = selector;
-
-  const equalityFnRef = useRef<EqualityFn<TSelection> | null>(null);
-  equalityFnRef.current = equalityFn;
+  ]);
+  const valueRef = useRefOf(value);
+  const selectorRef = useRefOf(selector);
+  const equalityFnRef = useRefOf(equalityFn);
 
   useEffect(() => {
     return stateSingleton.listen(nextState => {
-      setCurrentState(currentState => {
-        const selector = selectorRef.current!;
-        const equalityFn = equalityFnRef.current!;
-        if (!equalityFn(selector(nextState), selector(currentState))) {
-          return nextState;
-        }
-        return currentState;
-      });
+      const nextValue = selectorRef.current!(nextState);
+      if (!equalityFnRef.current!(valueRef.current!, nextValue)) {
+        forceUpdate();
+      }
     });
   }, [stateSingleton]);
 
-  return selector(currentState);
+  return value;
 }
