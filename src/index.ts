@@ -66,7 +66,9 @@ export function useStateSingleton<TState, TSelection = DeepReadonly<TState>>(
   selector: SelectorFn<DeepReadonly<TState>, TSelection> = defaultSelector,
   equalityFn: EqualityFn<TSelection> = defaultEquality
 ): TSelection {
-  const [value, setValue] = useState(() => selector(stateSingleton.getState()));
+  const [currentState, setCurrentState] = useState(() =>
+    stateSingleton.getState()
+  );
 
   const selectorRef = useRef<SelectorFn<
     DeepReadonly<TState>,
@@ -79,17 +81,16 @@ export function useStateSingleton<TState, TSelection = DeepReadonly<TState>>(
 
   useEffect(() => {
     return stateSingleton.listen(nextState => {
-      setValue(value => {
+      setCurrentState(currentState => {
         const selector = selectorRef.current!;
         const equalityFn = equalityFnRef.current!;
-        const nextValue = selector(nextState);
-        if (!equalityFn(nextValue, value)) {
-          return nextValue;
+        if (!equalityFn(selector(nextState), selector(currentState))) {
+          return nextState;
         }
-        return value;
+        return currentState;
       });
     });
   }, [stateSingleton]);
 
-  return value;
+  return selector(currentState);
 }
