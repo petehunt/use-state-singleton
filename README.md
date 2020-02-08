@@ -52,7 +52,7 @@ const appStateSingleton = new StateSingleton({
 });
 ```
 
-just like redux, your app state is fully contained in a single data structure called a `StateSingleton`. you can have multiple `StateSingletons` in your app if you'd like (i.e. for different apps), but each one should describe a different part of your application. that is, it would be a good idea to have a single `Todos` `StateSingleton`, not an instance of `StateSingleton` for every item in the todo list.
+just like redux, your app state is fully contained in a single data structure called a `StateSingleton`. you can have multiple `StateSingletons` in your app if you'd like (i.e. for different apps), but each one should describe a different part of your application. that is, it would be a good idea to have a single `Todos` `StateSingleton`, not an instance of `StateSingleton` for every item in the todo list; a `StateSingleton` should never contain other `StateSingletons`.
 
 under the hood, `use-state-singleton` uses `immer` to give you the usability of an imperative api with the performance benefits of immutability.
 
