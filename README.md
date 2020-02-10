@@ -2,6 +2,10 @@
 
 `use-state-singleton` is yet another redux alternative. the goal is to eliminate action objects -- which are tedious to write and allocate garbage -- and replace them with plain old functions, while maintaining an immutable programming model familiar to redux users.
 
+## project status
+
+this was a weekend hack. it has pretty good test coverage and should be fast, but it isn't used in any production software yet.
+
 ## todos
 
 you can see the [redux todos example](https://github.com/reduxjs/redux/tree/master/examples/todos) ported to `use-state-singleton` below. compare how much code there is in the (vanilla js) redux version vs the (fully typed) `use-state-singleton` version!
@@ -207,3 +211,7 @@ function handleCheckboxToggled(id: string) {
 
 - you can refer to the type of your `StateSingleton` by using `typeof myStateSingleton`. this is just a handy typescript feature.
 - you can refer to the type of your `StateSingleton`'s **state** by using `StateType<typeof myStateSingleton>`. this ships with `use-state-singleton`.
+
+## related work
+
+  * [Pullstate](https://lostpebble.github.io/pullstate/)
