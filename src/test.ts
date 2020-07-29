@@ -8,7 +8,7 @@ import { act } from "react-dom/test-utils";
 enum VisibilityFilter {
   SHOW_ALL,
   SHOW_COMPLETED,
-  SHOW_ACTIVE
+  SHOW_ACTIVE,
 }
 
 interface Todo {
@@ -27,7 +27,7 @@ function addTodo(state: TodoState, text: string) {
   state.todos.push({
     id: (state.nextTodoId++).toString(),
     text,
-    completed: false
+    completed: false,
   });
 }
 
@@ -43,11 +43,11 @@ function toggleTodo(state: TodoState, id: string) {
   }
 }
 
-test("it works", async t => {
+test("it works", async (t) => {
   const stateSingleton = new StateSingleton({
     todos: [],
     visibilityFilter: VisibilityFilter.SHOW_ALL,
-    nextTodoId: 0
+    nextTodoId: 0,
   });
 
   let changes = [];
@@ -55,14 +55,14 @@ test("it works", async t => {
   t.deepEqual(stateSingleton.getState(), {
     todos: [],
     visibilityFilter: VisibilityFilter.SHOW_ALL,
-    nextTodoId: 0
+    nextTodoId: 0,
   });
 
-  stateSingleton.listen(state => {
+  stateSingleton.listen((state) => {
     changes.push(state);
   });
 
-  stateSingleton.update(state => {
+  stateSingleton.update((state) => {
     addTodo(state, "foo");
     addTodo(state, "bar");
     addTodo(state, "baz");
@@ -72,21 +72,21 @@ test("it works", async t => {
   t.deepEqual(stateSingleton.getState().todos, [
     { id: "0", text: "foo", completed: false },
     { id: "1", text: "bar", completed: false },
-    { id: "2", text: "baz", completed: false }
+    { id: "2", text: "baz", completed: false },
   ]);
 
-  stateSingleton.update(state => {
+  stateSingleton.update((state) => {
     toggleTodo(state, "1");
   });
 
   t.deepEqual(stateSingleton.getState().todos, [
     { id: "0", text: "foo", completed: false },
     { id: "1", text: "bar", completed: true },
-    { id: "2", text: "baz", completed: false }
+    { id: "2", text: "baz", completed: false },
   ]);
 });
 
-test.only("react hook", async t => {
+test("react hook", async (t) => {
   const { window } = new JSDOM(
     `<!DOCTYPE html><html><body><div id="root"></div></body></html>`
   );
@@ -104,9 +104,9 @@ test.only("react hook", async t => {
     const prevListen = singleton.listen;
 
     // monkeypatches needed for testing
-    singleton.listen = cb => {
+    singleton.listen = (cb) => {
       numListenCalls++;
-      return prevListen.call(singleton, value => {
+      return prevListen.call(singleton, (value) => {
         numChangeCallbacks++;
         return cb(value);
       });
@@ -138,7 +138,7 @@ test.only("react hook", async t => {
   function MyComponent({
     singleton,
     selector,
-    equalityFn
+    equalityFn,
   }: {
     singleton: typeof counterSingleton;
     selector: typeof selector1;
@@ -161,7 +161,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector1,
     equalityFn: equality1,
-    singleton: counterSingleton
+    singleton: counterSingleton,
   });
   t.equal(container.innerHTML, "<div>0</div>");
   t.equal(numListenCalls, 1);
@@ -172,7 +172,7 @@ test.only("react hook", async t => {
 
   // update a field that wasn't selected
   act(() => {
-    counterSingleton.update(state => {
+    counterSingleton.update((state) => {
       state.otherField++;
     });
   });
@@ -186,7 +186,7 @@ test.only("react hook", async t => {
 
   // update a field that was selected
   act(() => {
-    counterSingleton.update(state => {
+    counterSingleton.update((state) => {
       state.count++;
     });
   });
@@ -202,7 +202,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector1,
     equalityFn: equality1,
-    singleton: counterSingleton
+    singleton: counterSingleton,
   });
   t.equal(container.innerHTML, "<div>1</div>");
   t.equal(numListenCalls, 1);
@@ -215,7 +215,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector2,
     equalityFn: equality1,
-    singleton: counterSingleton
+    singleton: counterSingleton,
   });
   t.equal(container.innerHTML, "<div>1</div>");
   t.equal(numListenCalls, 1);
@@ -228,7 +228,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector2,
     equalityFn: equality2,
-    singleton: counterSingleton
+    singleton: counterSingleton,
   });
   t.equal(container.innerHTML, "<div>1</div>");
   t.equal(numListenCalls, 1);
@@ -244,7 +244,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector2,
     equalityFn: equality2,
-    singleton: counterSingleton2
+    singleton: counterSingleton2,
   });
   t.equal(container.innerHTML, "<div>0</div>");
   t.equal(numListenCalls, 2);
@@ -254,7 +254,7 @@ test.only("react hook", async t => {
   t.equal(numSelects, 6);
 
   // old singleton does not update anything
-  counterSingleton.update(state => {
+  counterSingleton.update((state) => {
     state.count++;
   });
   t.equal(container.innerHTML, "<div>0</div>");
@@ -266,7 +266,7 @@ test.only("react hook", async t => {
 
   // new singleton updates correctly
   act(() => {
-    counterSingleton2.update(state => {
+    counterSingleton2.update((state) => {
       state.count++;
     });
   });
@@ -290,7 +290,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector2,
     equalityFn: equality3,
-    singleton: counterSingleton2
+    singleton: counterSingleton2,
   });
   t.equal(container.innerHTML, "<div>1</div>");
   t.equal(numListenCalls, 2);
@@ -301,7 +301,7 @@ test.only("react hook", async t => {
   t.equal(equality3Calls, 0);
 
   act(() => {
-    counterSingleton2.update(state => {
+    counterSingleton2.update((state) => {
       state.count++;
     });
   });
@@ -317,7 +317,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector2,
     equalityFn: equality2,
-    singleton: counterSingleton2
+    singleton: counterSingleton2,
   });
   t.equal(container.innerHTML, "<div>2</div>");
   t.equal(numListenCalls, 2);
@@ -335,7 +335,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector3,
     equalityFn: equality2,
-    singleton: counterSingleton2
+    singleton: counterSingleton2,
   });
   t.equal(container.innerHTML, "<div>99</div>");
   t.equal(numListenCalls, 2);
@@ -348,7 +348,7 @@ test.only("react hook", async t => {
   rerender({
     selector: selector3,
     equalityFn: equality2,
-    singleton: counterSingleton2
+    singleton: counterSingleton2,
   });
   t.equal(container.innerHTML, "<div>99</div>");
   t.equal(numListenCalls, 2);
@@ -359,7 +359,7 @@ test.only("react hook", async t => {
 
   // trigger callback with no changes
   act(() => {
-    counterSingleton2.update(state => {
+    counterSingleton2.update((state) => {
       state.count = state.count;
     });
   });

@@ -1,6 +1,6 @@
 import { Draft, produce } from "immer";
 import { useEffect, useRef, useMemo } from "react";
-import invariant from "invariant";
+import invariant from "tiny-invariant";
 import { DeepReadonly } from "utility-types";
 import useForceUpdate from "use-force-update";
 
@@ -78,14 +78,14 @@ export function useStateSingleton<TState, TSelection = DeepReadonly<TState>>(
   const forceUpdate = useForceUpdate();
   const value = useMemo(() => selector(stateSingleton.getState()), [
     selector,
-    stateSingleton.getState()
+    stateSingleton.getState(),
   ]);
   const valueRef = useRefOf(value);
   const selectorRef = useRefOf(selector);
   const equalityFnRef = useRefOf(equalityFn);
 
   useEffect(() => {
-    return stateSingleton.listen(nextState => {
+    return stateSingleton.listen((nextState) => {
       const nextValue = selectorRef.current!(nextState);
       if (!equalityFnRef.current!(valueRef.current!, nextValue)) {
         forceUpdate();
