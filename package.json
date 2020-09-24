@@ -1,6 +1,6 @@
 {
   "name": "use-state-singleton",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,7 +27,6 @@
   "dependencies": {
     "immer": "^5.3.2",
     "tiny-invariant": "^1.1.0",
-    "use-force-update": "^1.0.7",
     "utility-types": "^3.10.0"
   },
   "peerDependencies": {

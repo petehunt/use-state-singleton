@@ -1,8 +1,7 @@
 import { Draft, produce } from "immer";
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useState } from "react";
 import invariant from "tiny-invariant";
 import { DeepReadonly } from "utility-types";
-import useForceUpdate from "use-force-update";
 
 export interface StateSingletonListener<TState> {
   (state: DeepReadonly<TState>): void;
@@ -15,9 +14,7 @@ export type StateType<TStateSingleton> = TStateSingleton extends StateSingleton<
   : never;
 
 export class StateSingleton<TState> {
-  // Setting this to StateSingletonListener<T> confused the type inferencer
-  // so we go with unknown instead.
-  private listeners: Set<unknown> = new Set();
+  private listeners: Set<StateSingletonListener<TState>> = new Set();
 
   constructor(private state: TState) {}
 
@@ -54,44 +51,22 @@ export interface SelectorFn<TReadonlyState, TSelection> {
   (state: TReadonlyState): TSelection;
 }
 
-export interface EqualityFn<TSelection> {
-  (prev: TSelection, next: TSelection): boolean;
-}
-
 export const defaultSelector: SelectorFn<any, any> = (state: any) => state;
-export const defaultEquality: EqualityFn<any> = (prev: any, next: any) =>
-  prev === next;
-
-function useRefOf<T>(value: T) {
-  const ref = useRef<T>();
-  useEffect(() => {
-    ref.current = value;
-  });
-  return ref;
-}
 
 export function useStateSingleton<TState, TSelection = DeepReadonly<TState>>(
   stateSingleton: StateSingleton<TState>,
-  selector: SelectorFn<DeepReadonly<TState>, TSelection> = defaultSelector,
-  equalityFn: EqualityFn<TSelection> = defaultEquality
+  selector: SelectorFn<DeepReadonly<TState>, TSelection> = defaultSelector
 ): TSelection {
-  const forceUpdate = useForceUpdate();
-  const value = useMemo(() => selector(stateSingleton.getState()), [
-    selector,
-    stateSingleton.getState(),
-  ]);
-  const valueRef = useRefOf(value);
-  const selectorRef = useRefOf(selector);
-  const equalityFnRef = useRefOf(equalityFn);
+  const [currentValue, setCurrentValue] = useState(
+    selector(stateSingleton.getState())
+  );
 
   useEffect(() => {
+    setCurrentValue(selector(stateSingleton.getState()));
     return stateSingleton.listen((nextState) => {
-      const nextValue = selectorRef.current!(nextState);
-      if (!equalityFnRef.current!(valueRef.current!, nextValue)) {
-        forceUpdate();
-      }
+      setCurrentValue(selector(nextState));
     });
-  }, [stateSingleton]);
+  }, [stateSingleton, selector]);
 
-  return value;
+  return currentValue;
 }

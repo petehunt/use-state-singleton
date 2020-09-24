@@ -2,6 +2,8 @@
 
 `use-state-singleton` is yet another redux alternative. the goal is to eliminate action objects -- which are tedious to write and allocate garbage -- and replace them with plain old functions, while maintaining an immutable programming model familiar to redux users.
 
+it's also just a few lines of code!
+
 ## project status
 
 this was a weekend hack. it has pretty good test coverage and should be fast, but it isn't used in any production software yet.
@@ -68,13 +70,7 @@ function MyComponent() {
   const state = useStateSingleton(appStateSingleton);
   // you can use a selector to get part of the state, which will only rerender the component when the
   // selected value changes
-  const todos = useStateSingleton(appStateSingleton, state => state.todos);
-  // you can also provide a custom comparator if you need it, though this should be rare.
-  const todos = useStateSingleton(
-    appStateSingleton,
-    state => state.todos,
-    myDeepEqualFn
-  );
+  const todos = useStateSingleton(appStateSingleton, (state) => state.todos);
 
   // ... use the immutable todos array in your component ...
 }
@@ -83,7 +79,7 @@ function MyComponent() {
 finally, if you want to update a `StateSingleton` -- usually as a result of an HTTP request, user event, or timer -- use the `update()` method:
 
 ```typescript
-appStateSingleton.update(state => {
+appStateSingleton.update((state) => {
   // feel free to mutate state within these (synchronous) blocks
   addTodo(state, "foo");
 });
@@ -102,13 +98,13 @@ const todoState = new StateSingleton({
   todos: [],
   loading: false,
   error: null,
-  pendingRequests: 0
+  pendingRequests: 0,
 });
 
 async function fetchTodoList() {
   let requestId = 0;
 
-  todoState.update(state => {
+  todoState.update((state) => {
     state.loading = true;
     requestId = ++state.pendingRequests;
   });
@@ -117,7 +113,7 @@ async function fetchTodoList() {
     const req = await fetch("/todos.json");
     const json = await req.json();
 
-    todoState.update(state => {
+    todoState.update((state) => {
       // make sure that if there are multiple requests in flight, we keep
       // the latest one.
       if (state.pendingRequests === requestId) {
@@ -126,7 +122,7 @@ async function fetchTodoList() {
       }
     });
   } catch (e) {
-    todoState.update(state => {
+    todoState.update((state) => {
       if (state.pendingRequests === requestId) {
         state.loading = false;
         state.error = e.toString();
@@ -161,14 +157,14 @@ class TodosReader {
   constructor(private todos: Todo[]) {}
 
   getTodoById(id: string) {
-    return this.todos.find(todo => todo.id === id);
+    return this.todos.find((todo) => todo.id === id);
   }
 
   // ... some other methods ...
 }
 
 function useTodosReader() {
-  return new TodosReader(useStateSingleton(todoState, state => state.todos));
+  return new TodosReader(useStateSingleton(todoState, (state) => state.todos));
 }
 ```
 
@@ -200,7 +196,7 @@ class TodosWriter extends TodosReader {
 }
 
 function handleCheckboxToggled(id: string) {
-  todoState.update(state => {
+  todoState.update((state) => {
     const todoWriter = new TodoWriter(state);
     todoWriter.getTodoById(id).toggleCompleted();
   });
@@ -214,4 +210,4 @@ function handleCheckboxToggled(id: string) {
 
 ## related work
 
-  * [Pullstate](https://lostpebble.github.io/pullstate/)
+- [Pullstate](https://lostpebble.github.io/pullstate/)
