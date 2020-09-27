@@ -57,7 +57,7 @@ export function useStateSingleton<TState, TSelection = DeepReadonly<TState>>(
   stateSingleton: StateSingleton<TState>,
   selector: SelectorFn<DeepReadonly<TState>, TSelection> = defaultSelector
 ): TSelection {
-  const [currentValue, setCurrentValue] = useState(
+  const [currentValue, setCurrentValue] = useState(() =>
     selector(stateSingleton.getState())
   );
 
