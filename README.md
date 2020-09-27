@@ -67,10 +67,15 @@ there's a react hook for reading from the state.
 ```tsx
 function MyComponent() {
   // you can get the whole state, which will result in the component rerendering on every change...
-  const state = useStateSingleton(appStateSingleton);
+  const entireState = useStateSingleton(appStateSingleton);
   // you can use a selector to get part of the state, which will only rerender the component when the
   // selected value changes
   const todos = useStateSingleton(appStateSingleton, (state) => state.todos);
+  // usually, your selector can be memoized, which can potentially improve performance
+  const todosFaster = useStateSingleton(
+    appStateSingleton,
+    useCallback((state) => state.todos, [])
+  );
 
   // ... use the immutable todos array in your component ...
 }
